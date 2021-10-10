@@ -22,12 +22,14 @@ def main():
 
     with open(args.config, "r") as file:
         experiment_configs_dict = yaml.load(file, Loader=yaml.FullLoader)
-    experiment_configs = ExperimentConfigs(**experiment_configs_dict).configs
+    experiment_configs = ExperimentConfigs(**experiment_configs_dict)
     device = torch.device(args.device)
 
     args.log_dir.mkdir(parents=True, exist_ok=False)
+    with open(args.log_dir / "experiment_config.yml", "w") as file:
+        yaml.dump(experiment_configs.dict(), file)
 
-    for config in experiment_configs:
+    for config in experiment_configs.configs:
         task = CopyTask(**config.task.kwargs)
         model = globals()[config.model.class_name](**config.model.kwargs)
         train(train_config=config.train, task=task, model=model, device=device, log_dir=args.log_dir / config.name)
