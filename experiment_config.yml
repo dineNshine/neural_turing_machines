@@ -5,11 +5,11 @@ configs:
       train_kwargs:
         vector_size: 8
         min_sequence_length: 1
-        max_sequence_length: 16
+        max_sequence_length: 21
       validation_kwargs:
         vector_size: 8
-        min_sequence_length: 64
-        max_sequence_length: 96
+        min_sequence_length: 100
+        max_sequence_length: 101
     model:
       class_name: GRUAgent
       kwargs:
@@ -23,11 +23,11 @@ configs:
       train_kwargs:
         vector_size: 8
         min_sequence_length: 1
-        max_sequence_length: 16
+        max_sequence_length: 21
       validation_kwargs:
         vector_size: 8
-        min_sequence_length: 64
-        max_sequence_length: 96
+        min_sequence_length: 100
+        max_sequence_length: 101
     model:
       class_name: NTMAgent
       kwargs:
