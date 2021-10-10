@@ -25,6 +25,6 @@ configs:
         state_size: 64
         num_memory_banks: 64
         memory_bank_size: 64
-        max_shift: 10
+        max_shift: 5
         output_size: 8
     repeat: 5

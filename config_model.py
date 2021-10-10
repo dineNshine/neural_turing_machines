@@ -8,7 +8,7 @@ class TrainConfig(BaseModel):
     epoch_length: int = 100
     batch_size: int = 16
     lr: float = 0.001
-    wd: float = 0.1
+    wd: float = 0.01
 
 
 class TaskConfig(BaseModel):
