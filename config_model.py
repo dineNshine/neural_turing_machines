@@ -13,7 +13,8 @@ class TrainConfig(BaseModel):
 
 class TaskConfig(BaseModel):
     class_name: str
-    kwargs: dict[str, Any]
+    train_kwargs: dict[str, Any]
+    validation_kwargs: dict[str, Any]
 
 
 class ModelConfig(BaseModel):
