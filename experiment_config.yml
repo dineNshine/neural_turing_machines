@@ -11,6 +11,7 @@ configs:
         input_size: 8
         state_size: 64
         output_size: 8
+    repeat: 5
   - name: NTM Copy
     task:
       class_name: CopyTask
@@ -26,3 +27,4 @@ configs:
         memory_bank_size: 64
         max_shift: 10
         output_size: 8
+    repeat: 5

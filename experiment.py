@@ -2,6 +2,7 @@ import argparse
 import time
 from pathlib import Path
 
+import enlighten
 import torch
 import yaml  # type: ignore[import]
 
@@ -29,10 +30,23 @@ def main():
     with open(args.log_dir / "experiment_config.yml", "w") as file:
         yaml.dump(experiment_configs.dict(), file)
 
-    for config in experiment_configs.configs:
-        task = CopyTask(**config.task.kwargs)
-        model = globals()[config.model.class_name](**config.model.kwargs)
-        train(train_config=config.train, task=task, model=model, device=device, log_dir=args.log_dir / config.name)
+    with enlighten.get_manager() as manager:
+        for config in experiment_configs.configs:
+            exp_repeats_pbar = manager.counter(total=config.repeat, desc=config.name, unit="experiments")
+            for i in range(config.repeat):
+                log_dir = args.log_dir / f"{config.name} ({i})"
+                task = CopyTask(**config.task.kwargs)
+                model = globals()[config.model.class_name](**config.model.kwargs)
+                train(
+                    train_config=config.train,
+                    task=task,
+                    model=model,
+                    device=device,
+                    log_dir=log_dir,
+                    manager=manager,
+                )
+                exp_repeats_pbar.update()
+            exp_repeats_pbar.close()
 
 
 if __name__ == "__main__":

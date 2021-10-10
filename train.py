@@ -17,6 +17,7 @@ def train(
     model: StatefulModule,
     device: torch.device,
     log_dir: Path,
+    manager: enlighten.Manager,
 ) -> None:
     num_epochs = train_config.num_epochs
     epoch_length = train_config.epoch_length
@@ -32,43 +33,40 @@ def train(
     model.init_state(batch_size=batch_size)
     optimizer = RAdam(model.parameters(), lr=lr, weight_decay=wd)
 
-    with enlighten.get_manager() as manager:
-        epochs_pbar = manager.counter(total=num_epochs, desc="Training progress", unit="epochs")
-        for epoch in range(num_epochs):
-            iters_pbar = manager.counter(total=epoch_length, desc="Epoch progress", unit="iters", leave=False)
-            losses = []
-            for _ in range(epoch_length):
-                input_sequence, target_sequence, target_sequence_mask = task.get_batch(
-                    batch_size=batch_size, device=device
+    epochs_pbar = manager.counter(total=num_epochs, desc="Training progress", unit="epochs", leave=False)
+    for epoch in range(num_epochs):
+        iters_pbar = manager.counter(total=epoch_length, desc="Epoch progress", unit="iters", leave=False)
+        losses = []
+        for _ in range(epoch_length):
+            input_sequence, target_sequence, target_sequence_mask = task.get_batch(batch_size=batch_size, device=device)
+            loss = torch.zeros((), device=device)
+            for input, target, target_mask in zip(input_sequence, target_sequence, target_sequence_mask):
+                output = model(input=input)
+                loss = loss + target_mask[:, None] * F.binary_cross_entropy_with_logits(
+                    input=output, target=target, reduction="none"
                 )
-                loss = torch.zeros((), device=device)
-                for input, target, target_mask in zip(input_sequence, target_sequence, target_sequence_mask):
-                    output = model(input=input)
-                    loss = loss + target_mask[:, None] * F.binary_cross_entropy_with_logits(
-                        input=output, target=target, reduction="none"
-                    )
-                loss = (loss.sum(dim=1) / target_sequence_mask.sum(dim=0)).mean(dim=0)
-                losses.append(loss.item())
+            loss = (loss.sum(dim=1) / target_sequence_mask.sum(dim=0)).mean(dim=0)
+            losses.append(loss.item())
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-                model.detach_state()
-                model.reset_state(reset_mask=reset_mask)
+            model.detach_state()
+            model.reset_state(reset_mask=reset_mask)
 
-                iters_pbar.update()
-            iters_pbar.close()
-            epochs_pbar.update()
+            iters_pbar.update()
+        iters_pbar.close()
+        epochs_pbar.update()
 
-            mean_loss = sum(losses) / len(losses)
-            save_name = log_dir / f"{epoch:08d}.ckpt"
-            torch.save(
-                {
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                },
-                save_name,
-            )
-            writer.add_scalar("Loss/train", mean_loss, epoch)
-        epochs_pbar.close()
+        mean_loss = sum(losses) / len(losses)
+        save_name = log_dir / f"{epoch:08d}.ckpt"
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+            },
+            save_name,
+        )
+        writer.add_scalar("Loss/train", mean_loss, epoch)
+    epochs_pbar.close()

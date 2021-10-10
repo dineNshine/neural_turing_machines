@@ -26,6 +26,7 @@ class ExperimentConfig(BaseModel):
     train: TrainConfig = TrainConfig()
     task: TaskConfig
     model: ModelConfig
+    repeat: int = 1
 
 
 class ExperimentConfigs(BaseModel):
