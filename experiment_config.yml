@@ -8,8 +8,8 @@ configs:
         max_sequence_length: 16
       validation_kwargs:
         vector_size: 8
-        min_sequence_length: 32
-        max_sequence_length: 40
+        min_sequence_length: 64
+        max_sequence_length: 96
     model:
       class_name: GRUAgent
       kwargs:
@@ -26,14 +26,14 @@ configs:
         max_sequence_length: 16
       validation_kwargs:
         vector_size: 8
-        min_sequence_length: 32
-        max_sequence_length: 40
+        min_sequence_length: 64
+        max_sequence_length: 96
     model:
       class_name: NTMAgent
       kwargs:
         input_size: 8
         state_size: 64
-        num_memory_banks: 64
+        num_memory_banks: 128
         memory_bank_size: 64
         max_shift: 5
         output_size: 8
