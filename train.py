@@ -31,8 +31,9 @@ def train(
     reset_mask = torch.ones((batch_size,), dtype=torch.bool, device=device)
 
     model.to(device)
-    model.init_state(batch_size=batch_size)
     optimizer = RAdam(model.parameters(), lr=lr, weight_decay=wd)
+
+    state = model.init_state(batch_size=batch_size)
 
     epochs_pbar = manager.counter(total=num_epochs, desc="Training progress", unit="epochs", leave=False)
     for epoch in range(num_epochs):
@@ -45,7 +46,7 @@ def train(
             )
             loss = torch.zeros((), device=device)
             for input, target, target_mask in zip(input_sequence, target_sequence, target_sequence_mask):
-                output = model(input=input)
+                output, state = model(input=input, state=state)
                 loss = loss + target_mask[:, None] * F.binary_cross_entropy_with_logits(
                     input=output, target=target, reduction="none"
                 )
@@ -56,8 +57,8 @@ def train(
             loss.backward()
             optimizer.step()
 
-            model.detach_state()
-            model.reset_state(reset_mask=reset_mask)
+            state = model.detach_state(state=state)
+            state = model.reset_state(state=state, reset_mask=reset_mask)
 
             iters_pbar.update()
         iters_pbar.close()
@@ -85,14 +86,14 @@ def train(
                 )
                 loss = torch.zeros((), device=device)
                 for input, target, target_mask in zip(input_sequence, target_sequence, target_sequence_mask):
-                    output = model(input=input)
+                    output, state = model(input=input, state=state)
                     loss = loss + target_mask[:, None] * F.binary_cross_entropy_with_logits(
                         input=output, target=target, reduction="none"
                     )
                 loss = (loss.sum(dim=1) / target_sequence_mask.sum(dim=0)).mean(dim=0)
                 losses.append(loss.item())
 
-                model.reset_state(reset_mask=reset_mask)
+                state = model.reset_state(state=state, reset_mask=reset_mask)
 
                 iters_pbar.update()
             iters_pbar.close()

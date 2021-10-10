@@ -1,4 +1,5 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -8,20 +9,17 @@ from models.ntm import NTM
 
 
 class StatefulModule(nn.Module, ABC):
-    def init_state(self, batch_size: int) -> None:
-        for module in self.children():
-            if isinstance(module, StatefulModule):
-                module.init_state(batch_size=batch_size)
+    @abstractmethod
+    def init_state(self, batch_size: int) -> Any:
+        pass
 
-    def reset_state(self, reset_mask: Tensor) -> None:
-        for module in self.children():
-            if isinstance(module, StatefulModule):
-                module.reset_state(reset_mask=reset_mask)
+    @abstractmethod
+    def reset_state(self, state: Any, reset_mask: Tensor) -> Any:
+        pass
 
-    def detach_state(self) -> None:
-        for module in self.children():
-            if isinstance(module, StatefulModule):
-                module.detach_state()
+    @abstractmethod
+    def detach_state(self, state: Any) -> Any:
+        pass
 
 
 class GRUAgent(StatefulModule):
@@ -31,22 +29,19 @@ class GRUAgent(StatefulModule):
         self.gru = nn.GRUCell(input_size, state_size)
         self.char_logits = nn.Linear(state_size, output_size)
 
-    def init_state(self, batch_size: int) -> None:
-        super().init_state(batch_size)
-        self.state = self.initial_state.expand((batch_size, -1))
+    def init_state(self, batch_size: int) -> Tensor:
+        return self.initial_state.expand((batch_size, -1))
 
-    def reset_state(self, reset_mask: Tensor) -> None:
-        super().reset_state(reset_mask)
-        self.state = torch.where(reset_mask[:, None], self.initial_state, self.state)
+    def reset_state(self, state: Tensor, reset_mask: Tensor) -> Tensor:
+        return torch.where(reset_mask[:, None], self.initial_state, state)
 
-    def detach_state(self) -> None:
-        super().detach_state()
-        self.state = self.state.detach()
+    def detach_state(self, state: Tensor) -> Tensor:
+        return state.detach()
 
-    def forward(self, input: Tensor) -> Tensor:
-        self.state = self.gru(input, self.state)
-        char_logits = self.char_logits(self.state)
-        return char_logits
+    def forward(self, input: Tensor, state: Tensor) -> tuple[Tensor, Tensor]:
+        state = self.gru(input, state)
+        char_logits = self.char_logits(state)
+        return char_logits, state
 
 
 class NTMAgent(StatefulModule):
@@ -72,41 +67,44 @@ class NTMAgent(StatefulModule):
             max_shift=max_shift,
         )
 
-    def init_state(self, batch_size: int) -> None:
-        super().init_state(batch_size)
+    def init_state(self, batch_size: int) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         device = self.initial_state.device
         self.initial_memory = torch.zeros((batch_size, self.num_memory_banks, self.memory_bank_size), device=device)
         self.initial_addressing = torch.zeros((batch_size, self.num_memory_banks), device=device)
         self.initial_addressing[:, 0] = 1.0
-        self.state = self.initial_state.expand((batch_size, -1))
-        self.memory = self.initial_memory
-        self.previous_read_addressing = self.initial_addressing
-        self.previous_write_addressing = self.initial_addressing
+        state_ = self.initial_state.expand((batch_size, -1))
+        memory = self.initial_memory
+        previous_read_addressing = self.initial_addressing
+        previous_write_addressing = self.initial_addressing
+        return state_, memory, previous_read_addressing, previous_write_addressing
 
-    def reset_state(self, reset_mask: Tensor) -> None:
-        super().reset_state(reset_mask)
-        self.state = torch.where(reset_mask[:, None], self.initial_state, self.state)
-        self.memory = torch.where(reset_mask[:, None, None], self.initial_memory, self.memory)
-        self.previous_read_addressing = torch.where(
-            reset_mask[:, None], self.initial_addressing, self.previous_read_addressing
-        )
-        self.previous_write_addressing = torch.where(
-            reset_mask[:, None], self.initial_addressing, self.previous_write_addressing
-        )
+    def reset_state(
+        self, state: tuple[Tensor, Tensor, Tensor, Tensor], reset_mask: Tensor
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        state_, memory, previous_read_addressing, previous_write_addressing = state
+        state_ = torch.where(reset_mask[:, None], self.initial_state, state_)
+        memory = torch.where(reset_mask[:, None, None], self.initial_memory, memory)
+        previous_read_addressing = torch.where(reset_mask[:, None], self.initial_addressing, previous_read_addressing)
+        previous_write_addressing = torch.where(reset_mask[:, None], self.initial_addressing, previous_write_addressing)
+        return state_, memory, previous_read_addressing, previous_write_addressing
 
-    def detach_state(self) -> None:
-        super().detach_state()
-        self.state = self.state.detach()
-        self.memory = self.memory.detach()
-        self.previous_read_addressing = self.previous_read_addressing.detach()
-        self.previous_write_addressing = self.previous_write_addressing.detach()
+    def detach_state(self, state: tuple[Tensor, Tensor, Tensor, Tensor]) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        state_, memory, previous_read_addressing, previous_write_addressing = state
+        state_ = state_.detach()
+        memory = memory.detach()
+        previous_read_addressing = previous_read_addressing.detach()
+        previous_write_addressing = previous_write_addressing.detach()
+        return state_, memory, previous_read_addressing, previous_write_addressing
 
-    def forward(self, input: Tensor) -> Tensor:
-        output, self.state, self.memory, self.previous_read_addressing, self.previous_write_addressing = self.ntm(
+    def forward(
+        self, input: Tensor, state: tuple[Tensor, Tensor, Tensor, Tensor]
+    ) -> tuple[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
+        state_, memory, previous_read_addressing, previous_write_addressing = state
+        output, state_, memory, previous_read_addressing, previous_write_addressing = self.ntm(
             input=input,
-            state=self.state,
-            memory=self.memory,
-            previous_read_addressing=self.previous_read_addressing,
-            previous_write_addressing=self.previous_write_addressing,
+            state=state_,
+            memory=memory,
+            previous_read_addressing=previous_read_addressing,
+            previous_write_addressing=previous_write_addressing,
         )
-        return output
+        return output, (state_, memory, previous_read_addressing, previous_write_addressing)
