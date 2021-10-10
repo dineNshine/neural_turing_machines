@@ -1,0 +1,28 @@
+configs:
+  - name: GRU Copy
+    task:
+      class_name: CopyTask
+      kwargs:
+        vector_size: 8
+        max_sequence_length: 16
+    model:
+      class_name: GRUAgent
+      kwargs:
+        input_size: 8
+        state_size: 64
+        output_size: 8
+  - name: NTM Copy
+    task:
+      class_name: CopyTask
+      kwargs:
+        vector_size: 8
+        max_sequence_length: 16
+    model:
+      class_name: NTMAgent
+      kwargs:
+        input_size: 8
+        state_size: 64
+        num_memory_banks: 64
+        memory_bank_size: 64
+        max_shift: 10
+        output_size: 8
