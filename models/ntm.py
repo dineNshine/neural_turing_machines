@@ -12,7 +12,6 @@ class AddressingHead(nn.Module):
         self.memory_bank_size = memory_bank_size
         self.argument_sizes = [memory_bank_size, 1, num_shift_offsets]
         self.arguments = nn.Linear(input_size, sum(self.argument_sizes))
-        nn.init.constant_(self.arguments.bias[memory_bank_size], -0.5 * math.log(self.memory_bank_size))
 
     def forward(
         self,
