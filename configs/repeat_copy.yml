@@ -1,0 +1,48 @@
+configs:
+  - name: GRU Repeat Copy
+    task:
+      class_name: RepeatCopyTask
+      train_kwargs:
+        vector_size: 8
+        min_sequence_length: 1
+        max_sequence_length: 11
+        min_num_repetitions: 1
+        max_num_repetitions: 11
+      validation_kwargs:
+        vector_size: 8
+        min_sequence_length: 20
+        max_sequence_length: 21
+        min_num_repetitions: 1
+        max_num_repetitions: 11
+    model:
+      class_name: GRUAgent
+      kwargs:
+        input_size: 9
+        state_size: 64
+        output_size: 8
+    repeat: 5
+  - name: NTM Repeat Copy
+    task:
+      class_name: RepeatCopyTask
+      train_kwargs:
+        vector_size: 8
+        min_sequence_length: 1
+        max_sequence_length: 11
+        min_num_repetitions: 1
+        max_num_repetitions: 11
+      validation_kwargs:
+        vector_size: 8
+        min_sequence_length: 20
+        max_sequence_length: 21
+        min_num_repetitions: 1
+        max_num_repetitions: 11
+    model:
+      class_name: NTMAgent
+      kwargs:
+        input_size: 9
+        state_size: 64
+        num_memory_banks: 128
+        memory_bank_size: 64
+        max_shift: 5
+        output_size: 8
+    repeat: 5

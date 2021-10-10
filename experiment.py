@@ -9,6 +9,7 @@ import yaml  # type: ignore[import]
 from config_model import ExperimentConfigs
 from models.agents import GRUAgent, NTMAgent
 from tasks.copy import CopyTask
+from tasks.repeat_copy import RepeatCopyTask
 from train import train
 
 
