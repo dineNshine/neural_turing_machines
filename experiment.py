@@ -35,7 +35,7 @@ def main():
             exp_repeats_pbar = manager.counter(total=config.repeat, desc=config.name, unit="experiments")
             for i in range(config.repeat):
                 log_dir = args.log_dir / f"{config.name} ({i})"
-                task = CopyTask(**config.task.kwargs)
+                task = globals()[config.task.class_name](**config.task.kwargs)
                 model = globals()[config.model.class_name](**config.model.kwargs)
                 train(
                     train_config=config.train,
