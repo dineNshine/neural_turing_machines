@@ -27,7 +27,7 @@ class GRUAgent(StatefulModule):
         super().__init__()
         self.initial_state = nn.Parameter(torch.zeros((state_size,)))
         self.gru = nn.GRUCell(input_size, state_size)
-        self.char_logits = nn.Linear(state_size, output_size)
+        self.output = nn.Linear(state_size, output_size)
 
     def init_state(self, batch_size: int) -> Tensor:
         return self.initial_state.expand((batch_size, -1))
@@ -40,8 +40,8 @@ class GRUAgent(StatefulModule):
 
     def forward(self, input: Tensor, state: Tensor) -> tuple[Tensor, Tensor]:
         state = self.gru(input, state)
-        char_logits = self.char_logits(state)
-        return char_logits, state
+        output = self.output(state)
+        return output, state
 
 
 class NTMAgent(StatefulModule):
