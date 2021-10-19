@@ -98,14 +98,12 @@ class NTM(nn.Module):
         state_size: int,
         memory_bank_size: int,
         max_shift: int,
-        output_size: int,
     ):
         super().__init__()
         self.read_head_features = nn.Linear(input_size + state_size, state_size)
         self.read_head = ReadHead(state_size, max_shift, memory_bank_size)
         self.gru = nn.GRUCell(input_size + memory_bank_size, state_size)
         self.write_head = WriteHead(state_size, max_shift, memory_bank_size)
-        self.output = nn.Linear(state_size, output_size)
 
     def forward(
         self,
@@ -127,6 +125,4 @@ class NTM(nn.Module):
         state = self.gru(input_read_data, state)
         # (batch_size, num_memory_banks, memory_bank_size), (batch_size, num_memory_banks)
         memory, write_addressing = self.write_head(state, memory, previous_write_addressing)
-        # (batch_size, output_size)
-        output = self.output(state)
-        return output, state, memory, read_addressing, write_addressing
+        return state, memory, read_addressing, write_addressing

@@ -61,11 +61,12 @@ class NTMAgent(StatefulModule):
         self.initial_state = nn.Parameter(torch.zeros((state_size,)))
         self.ntm = NTM(
             input_size=input_size,
-            output_size=output_size,
             state_size=state_size,
             memory_bank_size=memory_bank_size,
             max_shift=max_shift,
         )
+
+        self.output = nn.Linear(state_size, output_size)
 
     def init_state(self, batch_size: int) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         device = self.initial_state.device
@@ -100,11 +101,12 @@ class NTMAgent(StatefulModule):
         self, input: Tensor, state: tuple[Tensor, Tensor, Tensor, Tensor]
     ) -> tuple[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
         state_, memory, previous_read_addressing, previous_write_addressing = state
-        output, state_, memory, previous_read_addressing, previous_write_addressing = self.ntm(
+        state_, memory, previous_read_addressing, previous_write_addressing = self.ntm(
             input=input,
             state=state_,
             memory=memory,
             previous_read_addressing=previous_read_addressing,
             previous_write_addressing=previous_write_addressing,
         )
+        output = self.output(state_)
         return output, (state_, memory, previous_read_addressing, previous_write_addressing)
